@@ -231,21 +231,9 @@ const addonInterface = builder.getInterface();
 
 // Serve the manifest
 app.get('/manifest.json', (req, res) => {
-  if (!addonInterface || !addonInterface.manifest) {
-      console.error('Error: addonInterface or addonInterface.manifest is not available!');
-      res.status(500).send('Internal Server Error: Addon manifest not configured.');
-      return;
-  }
   res.setHeader('Content-Type', 'application/json');
   res.json(addonInterface.manifest);
 });
-
-// Serve the addon logic (subtitles endpoint)
-if (addonInterface && typeof addonInterface.middleware === 'function') {
-  app.use(addonInterface.middleware);
-} else {
-  console.error('CRITICAL ERROR: addonInterface.middleware is not a function or addonInterface is invalid.');
-}
 
 // Serve the static subtitle files from the 'subs' directory
 app.use('/subs', express.static(subsDir));
