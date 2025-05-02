@@ -1,95 +1,61 @@
-
-
-// יצירת ספריית subs אם לא קיימת
-const subsDir = path.join(__dirname, 'subs');
-if (!fs.existsSync(subsDir)) {
-    fs.mkdirSync(subsDir);
-    console.log("Successfully created 'subs' directory.");
-}
-
-// הגדרת המניפסט של התוסף
-const manifest = {
-    id: "community.hebrew-translator",
-    version: "1.0.2",
-    name: "AI Hebrew Subtitles (GPT)",
-    description: "Fetches English subtitles from OpenSubtitles and translates them to Hebrew using AI (GPT-3.5 Turbo).",
-    resources: ["subtitles"],  // ✅ זה חשוב - רק subtitles
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
-    catalogs: []
-};
-
-const builder = new addonBuilder(manifest);
-
-// כאן נגדיר את פונקציית הכתוביות
-builder.defineSubtitlesHandler(({ type, id }) => {
-    // הדוגמה הזו מחזירה כתוביות מדומות, תוכל להחליף את זה ב-API אמיתי + תרגום
-    return Promise.resolve({
-        subtitles: [
-            {
-                id: "hebrew-ai-sub",
-                lang: "he",
-                label: "Hebrew (AI Translated)",
-                url: `https://stremio-hebrew-subtitles.onrender.com/subs/${id}.srt`
-            }
-        ]
-    });
-});
-
-// התחלת השרת
-module.exports = builder.getInterface();
 const { addonBuilder } = require('stremio-addon-sdk');
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
+const express = require('express');
 
-const subsDir = path.join(__dirname, 'subs');
-if (!fs.existsSync(subsDir)) {
-    fs.mkdirSync(subsDir);
+const SUBS_DIR = path.join(__dirname, 'subs');
+
+// ודא שהתיקייה קיימת
+if (!fs.existsSync(SUBS_DIR)) {
+    fs.mkdirSync(SUBS_DIR);
     console.log("Successfully created 'subs' directory.");
 }
 
-const manifest = {
-    id: "community.hebrew-translator",
-    version: "1.0.2",
-    name: "AI Hebrew Subtitles (GPT)",
-    description: "Fetches English subtitles from OpenSubtitles and translates them to Hebrew using AI (GPT-3.5 Turbo).",
-    resources: ["subtitles"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
+const app = express();
+app.use('/subs', express.static(SUBS_DIR));
+
+// בניית התוסף
+const builder = new addonBuilder({
+    id: 'community.hebrew-translator',
+    version: '1.0.2',
+    name: 'AI Hebrew Subtitles (GPT)',
+    description: 'Fetches English subtitles from OpenSubtitles and translates them to Hebrew using AI (GPT-3.5 Turbo).',
+    resources: ['subtitles'],
+    types: ['movie', 'series'],
+    idPrefixes: ['tt'],
     catalogs: []
-};
+});
 
-const builder = new addonBuilder(manifest);
+builder.defineSubtitlesHandler(async ({ type, id }) => {
+    console.log(`Received subtitles request for ${type} with id ${id}`);
 
-builder.defineSubtitlesHandler(({ type, id }) => {
-    return Promise.resolve({
+    // דוגמה: החזרת כתוביות מדומות בעברית
+    const subtitleUrl = `https://stremio-hebrew-subtitles.onrender.com/subs/${id}.vtt`;
+
+    // בעתיד, כאן תוכל לבדוק אם קיימת כבר גרסה מתורגמת או להפעיל את GPT לתרגום
+    return {
         subtitles: [
             {
-                id: "hebrew-ai-sub",
-                lang: "he",
-                label: "Hebrew (AI Translated)",
-                url: `https://stremio-hebrew-subtitles.onrender.com/subs/${id}.srt`
+                id: 'hebrew-ai',
+                lang: 'he',
+                url: subtitleUrl
             }
         ]
-    });
+    };
 });
 
-const addonInterface = builder.getInterface();
 const port = process.env.PORT || 7000;
-
-http.createServer((req, res) => {
-    if (req.url === '/manifest.json') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(addonInterface.manifest));
-    } else {
-        addonInterface.middleware(req, res);
-    }
-}).listen(port, () => {
-    console.log(`Stremio Addon Server listening on port ${port}`);
-    console.log("Manifest URL: https://stremio-hebrew-subtitles.onrender.com/manifest.json");
-    console.log("Serving subtitles from:", subsDir);
+app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(builder.getInterface()));
 });
 
-console.log("Manifest URL: https://stremio-hebrew-subtitles.onrender.com/manifest.json");
-console.log("Serving subtitles from:", subsDir);
+app.get('/', (req, res) => {
+    res.send('Stremio Hebrew Subtitles Addon is running.');
+});
+
+app.listen(port, () => {
+    console.log(`Stremio Addon Server listening on port ${port}`);
+    console.log(`Manifest URL: https://stremio-hebrew-subtitles.onrender.com/manifest.json`);
+    console.log(`Serving subtitles from: ${SUBS_DIR}`);
+});
