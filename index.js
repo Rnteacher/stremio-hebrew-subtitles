@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+const port = 10000;
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path'); // Import path module
@@ -8,6 +10,8 @@ const { addonBuilder } = require('stremio-addon-sdk');
 
 const app = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+app.use(cors());
+
 
 // Ensure the 'subs' directory exists
 const subsDir = path.join(__dirname, 'subs'); // Use absolute path
