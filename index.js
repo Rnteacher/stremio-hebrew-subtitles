@@ -44,7 +44,10 @@ builder.defineSubtitlesHandler(async ({ type, id }) => {
     };
 });
 
-const port = process.env.PORT || 7000;
+const port = process.env.PORT || 3000;
+require('http').createServer(getInterface()).listen(port, () => {
+  console.log(`Stremio Addon Server listening on port ${port}`);
+});
 app.get('/manifest.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(builder.getInterface()));
