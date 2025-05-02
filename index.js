@@ -23,13 +23,13 @@ const manifest = {
 // יצירת האובייקט של ה-Addon
 const builder = new addonBuilder(manifest);
 
-// פונקציה להחזרת כתוביות
-builder.defineResource('subtitles', async ({ id }) => {
+// הגדרת הפונקציה המנפיקה את הכתוביות
+builder.defineStreamHandler('subtitles', async ({ id }) => {
     try {
         // שליחת בקשה ל-OpenSubtitles או שירות אחר שברשותך
         const response = await axios.get(`https://api.opensubtitles.org/subtitles/${id}`);
         
-        // כאן אנו מניחים שיש לך פונקציה שמתרגמת את הכתוביות לעברית
+        // תרגום הכתוביות לעברית
         const translatedSubtitles = translateToHebrew(response.data);
 
         // החזרת כתוביות בעברית
