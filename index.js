@@ -460,19 +460,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve the manifest
+// Serve addon endpoints using the addon SDK router
+app.use('/', (req, res, next) => {
+  const handled = addonInterface.middleware(req, res, next);
+  if (!handled) next();
+});
+
+// Fallback manifest endpoint in case the middleware doesn't handle it
 app.get('/manifest.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json(addonInterface.manifest);
 });
 
 // Define subtitles endpoint with custom handler
-app.get('/subtitles/:type/:id/:extra?.json', async (req, res) => {
+app.get('/subtitles/:type/:id/:extra*.json', async (req, res) => {
   console.log(`[Server] Handling subtitle request: ${req.path}`);
-  const { type, id } = req.params;
+  const { type, id, extra } = req.params;
   
   try {
-    const result = await addonInterface.subtitles({ type, id });
+    const result = await addonInterface.subtitles({ type, id, extra });
     res.setHeader('Content-Type', 'application/json');
     res.send(result);
   } catch (error) {
