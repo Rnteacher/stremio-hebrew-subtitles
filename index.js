@@ -284,11 +284,13 @@ app.get('/manifest.json', (req, res) => {
 });
 
 // Check if middleware exists and is a function before using it
-if (addonInterface && addonInterface.middleware) {
-  console.log('Addon middleware is available. Applying app.use()...');
+const addonInterface = builder.getInterface();
+if (addonInterface.middleware) {
+  console.log('Applying addon middleware...');
   app.use(addonInterface.middleware());
 } else {
-  console.error('CRITICAL ERROR: addonInterface.middleware is not available or not a function.');
+  console.error('Error: addonInterface.middleware is not available or not valid.');
+  // אפשר להפסיק את ההרצה או לטפל אחרת במקרה כזה.
 }
 
 
