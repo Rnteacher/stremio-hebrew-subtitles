@@ -189,9 +189,12 @@ const manifest = {
   catalogs: [] // No catalogs needed for a subtitle addon
 };
 
+console.log('--- SDK BUILDER LOGGING START ---');
+console.log('Attempting to create addonBuilder...');
 const builder = new addonBuilder(manifest);
+console.log('addonBuilder created.');
 
-// Define the subtitle handler
+console.log('Attempting to define Subtitles Handler...');
 builder.defineSubtitlesHandler(async (args) => {
   console.log('Subtitles handler invoked with args:', args);
 
@@ -257,11 +260,15 @@ builder.defineSubtitlesHandler(async (args) => {
     return Promise.resolve({ subtitles: [] });
   }
 });
+console.log('Subtitles Handler defined.');
 
-// === Step 6: Setup Express Server ===
+console.log('Attempting to get addon interface...');
 const addonInterface = builder.getInterface();
+console.log('Addon interface obtained.');
+console.log('--- SDK BUILDER LOGGING END ---');
 
-// *** DIAGNOSTIC LOGGING START ***
+
+// *** DIAGNOSTIC LOGGING START (Existing) ***
 console.log('--- DIAGNOSTICS ---');
 console.log('Addon Interface Object:', JSON.stringify(addonInterface, null, 2)); // Stringify for better logging
 console.log('Type of addonInterface.manifest:', typeof addonInterface.manifest);
