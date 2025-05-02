@@ -284,15 +284,11 @@ app.get('/manifest.json', (req, res) => {
 });
 
 // Check if middleware exists and is a function before using it
-if (addonInterface && typeof addonInterface.middleware === 'function') {
-  console.log('Addon middleware is a function. Applying app.use()...');
-  // Serve the addon logic (subtitles endpoint)
-  app.use(addonInterface.middleware);
+if (addonInterface && addonInterface.middleware) {
+  console.log('Addon middleware is available. Applying app.use()...');
+  app.use(addonInterface.middleware());
 } else {
-  console.error('CRITICAL ERROR: addonInterface.middleware is not a function or addonInterface is invalid.');
-  console.error('Addon middleware will not be configured. Subtitle requests will likely fail.');
-  // Optional: You might want to prevent the server from starting or return errors
-  // For now, we just log the error, the server will start but subtitle requests won't work.
+  console.error('CRITICAL ERROR: addonInterface.middleware is not available or not a function.');
 }
 
 
