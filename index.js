@@ -384,7 +384,7 @@ builder.defineSubtitlesHandler(async (args) => {
   console.log(`[Stremio] Processing request for IMDb ID: ${imdbId}`);
   
   // Check if we already have this subtitle
-  const potentialFilename = path.join(subsDir, `${imdbId}_he.srt`);
+  const potentialFilename = path.join(subsDir, `${imdbId.replace(/[^a-zA-Z0-9]/g, '_')}_he.srt`);
   if (fs.existsSync(potentialFilename)) {
     console.log(`[Stremio] Found existing Hebrew subtitle for ${imdbId}`);
     const subtitleUrl = `/subs/${path.basename(potentialFilename)}`;
@@ -460,32 +460,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve addon endpoints using the addon SDK router
-app.use('/', (req, res, next) => {
-  const handled = addonInterface.middleware(req, res, next);
-  if (!handled) next();
+// Serve addon endpoints using the official middleware from stremio-addon-sdk
+app.get('/', (req, res) => {
+  res.redirect('/configure');
 });
 
-// Fallback manifest endpoint in case the middleware doesn't handle it
-app.get('/manifest.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.json(addonInterface.manifest);
-});
-
-// Define subtitles endpoint with custom handler
-app.get('/subtitles/:type/:id/:extra*.json', async (req, res) => {
-  console.log(`[Server] Handling subtitle request: ${req.path}`);
-  const { type, id, extra } = req.params;
-  
-  try {
-    const result = await addonInterface.subtitles({ type, id, extra });
-    res.setHeader('Content-Type', 'application/json');
-    res.send(result);
-  } catch (error) {
-    logError("Subtitle Endpoint", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// Use the built-in stremio addon SDK middleware for handling routes
+app.use(addonInterface.getRouter());
 
 // Serve the static subtitle files from the 'subs' directory
 app.use('/subs', express.static(subsDir));
@@ -508,34 +489,9 @@ app.get('/health', (req, res) => {
   res.json(status);
 });
 
-app.get('/', (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Stremio Hebrew AI Subtitle Addon</title>
-      <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
-      </style>
-    </head>
-    <body>
-      <h1>Stremio Hebrew AI Subtitle Addon</h1>
-      <p>This addon fetches English subtitles and translates them to Hebrew using AI.</p>
-      <p>To install in Stremio, add this URL to your addons:</p>
-      <code>${process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`}/manifest.json</code>
-      <p>Status: <strong>Running</strong></p>
-      <p><a href="/health">Check Health Status</a></p>
-    </body>
-    </html>
-  `);
-});
-
 // Fall-back route for any other requests coming from Stremio
-app.get('*', (req, res, next) => {
-  console.log(`[Server] Unhandled GET request: ${req.path}`);
+app.use((req, res, next) => {
+  console.log(`[Server] Unhandled request: ${req.method} ${req.path}`);
   if (req.path.endsWith('.json')) {
     // This might be a Stremio request we didn't anticipate
     console.log('[Server] Returning empty JSON response for .json request');
