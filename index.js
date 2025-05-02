@@ -105,10 +105,12 @@ builder.defineSubtitlesHandler(async ({ id }) => {
   };
 });
 
-app.use('/subtitles-addon/manifest.json', (req, res) => {
-  res.json(builder.getInterface().manifest);
+const addonInterface = builder.getInterface();
+
+app.get('/subtitles-addon/manifest.json', (req, res) => {
+  res.json(addonInterface.manifest);
 });
-app.use('/subtitles-addon', builder.getInterface().getRouter());
+app.use('/subtitles-addon', addonInterface);
 app.use('/subs', express.static('subs'));
 
 const port = process.env.PORT || 7000;
