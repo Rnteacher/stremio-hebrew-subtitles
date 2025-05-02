@@ -180,7 +180,7 @@ function saveSubtitleToFile(content, imdbId) {
 // === Step 5: Stremio Addon Definition ===
 const manifest = {
   id: 'community.hebrew-translator',
-  version: '1.0.1', // Increment version for changes
+  version: '1.0.2', // Increment version for changes
   name: 'AI Hebrew Subtitles (GPT)',
   description: 'Fetches English subtitles from OpenSubtitles and translates them to Hebrew using AI (GPT-3.5 Turbo).',
   resources: ['subtitles'],
@@ -261,15 +261,40 @@ builder.defineSubtitlesHandler(async (args) => {
 // === Step 6: Setup Express Server ===
 const addonInterface = builder.getInterface();
 
+// *** DIAGNOSTIC LOGGING START ***
+console.log('--- DIAGNOSTICS ---');
+console.log('Addon Interface Object:', JSON.stringify(addonInterface, null, 2)); // Stringify for better logging
+console.log('Type of addonInterface.manifest:', typeof addonInterface.manifest);
+console.log('Type of addonInterface.middleware:', typeof addonInterface.middleware);
+console.log('--- END DIAGNOSTICS ---');
+// *** DIAGNOSTIC LOGGING END ***
+
+
 // Serve the manifest
+// Make sure this route is defined *before* the addon middleware if they might conflict
+// (Though typically /manifest.json won't conflict with /subtitles/...)
 app.get('/manifest.json', (req, res) => {
+  if (!addonInterface || !addonInterface.manifest) {
+      console.error('Error: addonInterface or addonInterface.manifest is not available!');
+      res.status(500).send('Internal Server Error: Addon manifest not configured.');
+      return;
+  }
   res.setHeader('Content-Type', 'application/json');
   res.json(addonInterface.manifest);
 });
 
-// Serve the addon logic (subtitles endpoint)
-// *** FIX: Use the middleware provided by the SDK ***
-app.use(addonInterface.middleware);
+// Check if middleware exists and is a function before using it
+if (addonInterface && typeof addonInterface.middleware === 'function') {
+  console.log('Addon middleware is a function. Applying app.use()...');
+  // Serve the addon logic (subtitles endpoint)
+  app.use(addonInterface.middleware);
+} else {
+  console.error('CRITICAL ERROR: addonInterface.middleware is not a function or addonInterface is invalid.');
+  console.error('Addon middleware will not be configured. Subtitle requests will likely fail.');
+  // Optional: You might want to prevent the server from starting or return errors
+  // For now, we just log the error, the server will start but subtitle requests won't work.
+}
+
 
 // Serve the static subtitle files from the 'subs' directory
 // Ensure this path matches where files are saved and the URL constructed above
@@ -285,6 +310,8 @@ app.get('/', (req, res) => {
 const port = process.env.PORT || 7000;
 app.listen(port, () => {
   console.log(`Stremio Addon Server listening on port ${port}`);
-  console.log(`Manifest URL: https://stremio-hebrew-subtitles.onrender.com/subtitles-addon/manifest.json`);
+  // Construct the manifest URL based on Render's environment variable if available, otherwise localhost
+  const host = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+  console.log(`Manifest URL: ${host}/manifest.json`);
   console.log(`Serving subtitles from: ${subsDir}`);
 });
