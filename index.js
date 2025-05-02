@@ -4,8 +4,8 @@ const axios = require('axios');
 const fs = require('fs');
 const { OpenAI } = require('openai');
 const { addonBuilder } = require('stremio-addon-sdk');
-const app = express();
 
+const app = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // === שלב 1: משיכת כתוביות באנגלית מ־OpenSubtitles ===
@@ -99,12 +99,13 @@ builder.defineSubtitlesHandler(async ({ id }) => {
       {
         id: 'hebrew-ai',
         lang: 'he',
-        url: `http://yourdomain.com/subs/${imdbId}_he.srt`
+        url: `https://stremio-hebrew-subtitles.onrender.com/subs/${imdbId}_he.srt`
       }
     ]
   };
 });
 
+// === שימוש נכון ב-getInterface ===
 const addonInterface = builder.getInterface();
 
 app.get('/subtitles-addon/manifest.json', (req, res) => {
