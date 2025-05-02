@@ -1,6 +1,4 @@
-const { addonBuilder } = require('stremio-addon-sdk');
-const fs = require('fs');
-const path = require('path');
+
 
 // יצירת ספריית subs אם לא קיימת
 const subsDir = path.join(__dirname, 'subs');
