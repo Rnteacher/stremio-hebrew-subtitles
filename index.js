@@ -151,7 +151,7 @@ function saveSubtitleToFile(content, imdbId) {
 // We still use addonBuilder to easily create the manifest structure
 const manifest = {
   id: 'community.hebrew-translator',
-  version: '1.0.3', // Increment version
+  version: '1.0.4', // Increment version
   name: 'AI Hebrew Subtitles (GPT)',
   description: 'Fetches English subtitles from OpenSubtitles and translates them to Hebrew using AI (GPT-3.5 Turbo).',
   resources: ['subtitles'],
@@ -166,9 +166,10 @@ const builder = new addonBuilder(manifest);
 // === NEW: Function to handle the subtitle logic ===
 async function handleSubtitleRequest(imdbIdWithPrefix) {
     console.log(`Handling subtitle request for ID: ${imdbIdWithPrefix}`);
-    if (!imdbIdWithPrefix || !imdbIdWithPrefix.startsWith('tt')) {
-        console.error('Invalid IMDb ID received:', imdbIdWithPrefix);
-        return { subtitles: [] }; // Return empty array for invalid ID
+    // Basic validation for IMDb ID format (tt followed by numbers)
+    if (!imdbIdWithPrefix || !/^tt\d+$/.test(imdbIdWithPrefix)) {
+        console.error('Invalid IMDb ID format received:', imdbIdWithPrefix);
+        return { subtitles: [] }; // Return empty array for invalid ID format
     }
 
     const imdbIdNumeric = imdbIdWithPrefix.replace('tt', ''); // For OpenSubtitles API
@@ -240,15 +241,29 @@ app.get('/manifest.json', (req, res) => {
   res.json(addonManifest);
 });
 
-// *** NEW: Manually define the subtitles route ***
-// This pattern matches /subtitles/movie/tt123456.json or /subtitles/series/tt123456:1:2.json etc.
-// The :extra? makes the season/episode part optional and non-capturing for our needs here.
-app.get('/subtitles/:type/:id/:extra?.json', async (req, res) => {
-    const { type, id, extra } = req.params;
-    console.log(`Received subtitle request - Type: ${type}, ID: ${id}, Extra: ${extra}`);
+// *** UPDATED: Manually define the subtitles route WITHOUT optional parameter ***
+// This pattern matches /subtitles/movie/tt123456.json
+// It will also match /subtitles/series/tt123456:1:2.json, but the ':1:2' part will be included in the 'id' parameter.
+// We added validation in handleSubtitleRequest to handle only valid 'tt...' IDs.
+app.get('/subtitles/:type/:id.json', async (req, res) => {
+    const { type, id } = req.params; // 'extra' is no longer captured separately
+    console.log(`Received subtitle request - Type: ${type}, ID: ${id}`);
 
-    // The 'id' parameter from the route (e.g., 'tt123456') is what we need
-    const result = await handleSubtitleRequest(id);
+    // The 'id' parameter might contain season/episode info (e.g., "tt123456:1:2")
+    // We need to extract just the IMDb part (tt123456) before passing to the handler.
+    // Use a regex to extract the 'tt' followed by digits part.
+    const imdbMatch = id.match(/^(tt\d+)/);
+    const imdbIdOnly = imdbMatch ? imdbMatch[1] : null;
+
+    if (!imdbIdOnly) {
+        console.error(`Could not extract valid IMDb ID from route parameter: ${id}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.json({ subtitles: [] }); // Send empty if ID is invalid
+        return;
+    }
+
+    // Pass only the extracted IMDb ID (e.g., "tt123456") to the handler
+    const result = await handleSubtitleRequest(imdbIdOnly);
 
     res.setHeader('Content-Type', 'application/json');
     res.json(result); // Send the { subtitles: [...] } structure or { subtitles: [] } on error/not found
@@ -260,7 +275,7 @@ app.use('/subs', express.static(subsDir));
 
 // Optional: Root handler for testing if the server is up
 app.get('/', (req, res) => {
-    res.send('Stremio Hebrew AI Subtitle Addon is running (Manual Route)!');
+    res.send('Stremio Hebrew AI Subtitle Addon is running (Simplified Route)!');
 });
 
 
